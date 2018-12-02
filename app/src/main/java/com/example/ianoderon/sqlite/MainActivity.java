@@ -7,120 +7,172 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
+
+import java.util.ArrayList;
+
 public class MainActivity extends AppCompatActivity {
 
-    DBHelper helper;
+    FirebaseDatabase db;
+    DatabaseReference points;
+
     EditText eFname, eLname, ePoints;
 
-    Cursor res;
+    ArrayList<String> keyList;
+    int index;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        helper = new DBHelper(this);
 
-        res = helper.selectRecords();
+        db = FirebaseDatabase.getInstance("https://sqlite-caf54.firebaseio.com/");
+        points = db.getReference("points");
 
         eFname = findViewById(R.id.etFname);
         eLname = findViewById(R.id.etLname);
         ePoints = findViewById(R.id.etPoints);
 
+        keyList = new ArrayList<>();
+
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        points.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                for(DataSnapshot ss : dataSnapshot.getChildren())
+                    keyList.add(ss.getKey());
+//                Toast.makeText(this, )
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
+            }
+        });
     }
 
     public void moveFirst(View v) {
-        res.moveToFirst();
+        index = 0;
+        points.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                Student stud = dataSnapshot.child(keyList.get(index)).getValue(Student.class);
+                eFname.setText(stud.getFname());
+                eLname.setText(stud.getLname());
+                ePoints.setText(stud.getPoints().toString());
+            }
 
-        String fname = res.getString(1);
-        String lname = res.getString(2);
-        String point = res.getString(3);
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
 
-        eFname.setText(fname);
-        eLname.setText(lname);
-        ePoints.setText(point);
+            }
+        });
     }
 
-    public void movePrevious(View v){
-        res.moveToPrevious();
+    protected void Toast(String message) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+    }
 
-        String fname = res.getString(1);
-        String lname = res.getString(2);
-        String point = res.getString(3);
+    public void movePrevious(View v) {
+        index--;
+        points.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                Student stud = dataSnapshot.child(keyList.get(index)).getValue(Student.class);
+                eFname.setText(stud.getFname());
+                eLname.setText(stud.getLname());
+                ePoints.setText(stud.getPoints().toString());
+            }
 
-        eFname.setText(fname);
-        eLname.setText(lname);
-        ePoints.setText(point);
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
+            }
+        });
     }
 
     public void moveNext(View v) {
-        res.moveToNext();
+        index++;
+        points.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                Student stud = dataSnapshot.child(keyList.get(index)).getValue(Student.class);
+                eFname.setText(stud.getFname());
+                eLname.setText(stud.getLname());
+                ePoints.setText(stud.getPoints().toString());
+            }
 
-        String fname = res.getString(1);
-        String lname = res.getString(2);
-        String point = res.getString(3);
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
 
-        eFname.setText(fname);
-        eLname.setText(lname);
-        ePoints.setText(point);
+            }
+        });
     }
 
     public void moveLast(View v) {
-        res.moveToLast();
+        points.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                index = (int) dataSnapshot.getChildrenCount() - 1;
 
-        String fname = res.getString(1);
-        String lname = res.getString(2);
-        String point = res.getString(3);
+                Student stud = dataSnapshot.child(keyList.get(index)).getValue(Student.class);
+                eFname.setText(stud.getFname());
+                eLname.setText(stud.getLname());
+                ePoints.setText(stud.getPoints().toString());
+            }
 
-        eFname.setText(fname);
-        eLname.setText(lname);
-        ePoints.setText(point);
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
+            }
+        });
+
     }
 
 
     public void deleteRecord() {
-        String id = res.getString(0);
-        Integer countRow = helper.delete(id);
+//        points.child(keyList.get(index - 1)).removeValue();
 
-        if(countRow == 1)
-            Toast.makeText(this, "Deleted 1 record...", Toast.LENGTH_LONG).show();
-        else
-            Toast.makeText(this, "Deleted unsuccessful...", Toast.LENGTH_LONG).show();
+//        eFname.setText("");
+//        eLname.setText("");
+//        ePoints.setText("");
 
-        res = helper.selectRecords();
+        Toast("" + index);
+
     }
 
     public void editRecord(View v) {
+        String fname = eFname.getText().toString().trim();
+        String lname = eLname.getText().toString().trim();
+        Long score = Long.parseLong(ePoints.getText().toString().trim());
 
-        String firstName = eFname.getText().toString().trim();
-        String lastName = eLname.getText().toString().trim();
-        int points = Integer.parseInt(ePoints.getText().toString());
+        Student stud = new Student(fname, lname, score);
+        points.child(keyList.get(index)).setValue(stud);
 
-        String id = res.getString(0);
-        boolean isUpdated = helper.update(id, firstName, lastName, points);
-
-        if(isUpdated)
-            Toast.makeText(this, "Record updated...", Toast.LENGTH_LONG).show();
-        else
-            Toast.makeText(this, "Record error...", Toast.LENGTH_LONG).show();
-
-        res = helper.selectRecords();
+        Toast("record updated");
     }
 
     public void insertRecord(View v) {
-        String firstName = eFname.getText().toString().trim();
-        String lastName = eLname.getText().toString().trim();
-        int points = Integer.parseInt(ePoints.getText().toString());
+        String fname = eFname.getText().toString().trim();
+        String lname = eLname.getText().toString().trim();
+        Long score = Long.parseLong(ePoints.getText().toString().trim());
 
-        boolean isInserted = helper.insert(firstName, lastName, points);
+        String key = points.push().getKey();
 
-        if(isInserted)
-            Toast.makeText(this, "Record saved...", Toast.LENGTH_LONG).show();
-        else
-            Toast.makeText(this, "Record error...", Toast.LENGTH_LONG).show();
+        Student stud = new Student(fname, lname, score);
 
-        res = helper.selectRecords();
+        points.child(key).setValue(stud);
 
+        Toast("record inserted");
     }
 
 
